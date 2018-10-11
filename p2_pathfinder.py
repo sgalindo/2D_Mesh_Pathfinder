@@ -33,6 +33,7 @@ def find_path (source_point, destination_point, mesh):
     #queue starts with the source_box and will be used to process the boxes for the path
     #prev stores the prev node for the node saved in the dict
     #detail_points is a dictionary of map points (x,y)
+
     queue = [source_box]
     prev = {}
     detail_points = {}
@@ -45,6 +46,7 @@ def find_path (source_point, destination_point, mesh):
     detail_points[destination_box] = destination_point
 
     #Special case where destination box is the same as the source box, return path
+
     if destination_box == source_box:
         path.insert(0, (destination_point, source_point))
         return path, boxes.keys()
