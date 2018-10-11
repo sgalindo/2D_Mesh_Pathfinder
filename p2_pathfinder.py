@@ -1,4 +1,7 @@
 
+from math import inf, sqrt
+from heapq import heappop, heappush
+
 def find_path (source_point, destination_point, mesh):
 
     """
@@ -37,6 +40,7 @@ def find_path (source_point, destination_point, mesh):
     queue = [source_box]
     prev = {}
     detail_points = {}
+    dist = {source_box: 0}
     
     print('Source box:', str(source_box))
     print('Destination box:', str(destination_box))
@@ -51,6 +55,7 @@ def find_path (source_point, destination_point, mesh):
         path.insert(0, (destination_point, source_point))
         return path, boxes.keys()
 
+    """
     #Whenever you use path.insert, the format is (position, tuple)
     #The tuple is made up of two coordinates to make (x,y)
     while queue:
@@ -91,7 +96,44 @@ def find_path (source_point, destination_point, mesh):
                     detail_points[adj_node] = calculate_point(current_node, adj_node, detail_points)
                     boxes[adj_node] = detail_points[adj_node]
                     queue.append(adj_node)
-    
+    """
+
+    while queue:
+        current_node = heappop(queue)
+        current_dist = dist[current_node]
+        print(str(current_dist))
+
+        # CHANGE LATER
+        if current_node == destination_box:
+            #point1 and point2 are used to define the points of the box that they are in
+            point1 = destination_point
+            point2 = detail_points[current_node]
+            print('detail_points dict[current_node]', str(detail_points[current_node]))
+            path.insert(0, (point1, point2))
+            #Goes down the prev dict until you reach the source box
+            while prev[current_node] != source_box:
+                point1 = detail_points[current_node]
+                boxes[current_node] = point1
+                current_node = prev[current_node]
+                point2 = detail_points[current_node]
+                print('detail_points dict[current_node]', str(detail_points[current_node]))
+                path.insert(0, (point1, point2))
+            point1 = detail_points[current_node]
+            point2 = source_point
+            path.insert(0, (point1, point2))
+            boxes[current_node] = point1
+            #print(path)
+            print("Source: " + str(source_point))
+            print("Destination: " + str(destination_point))
+
+        for adj_node in mesh['adj'][current_node]:
+            detail_points[adj_node] = calculate_point(current_node, adj_node, detail_points)
+            pathcost = current_dist + sqrt((detail_points[adj_node][0] - detail_points[current_node][0])**2 + (detail_points[adj_node][1] - detail_points[current_node][1])**2) 
+            if adj_node not in dist or pathcost < dist[adj_node]:
+                dist[adj_node] = pathcost
+                prev[adj_node] = current_node
+                heappush(queue, (pathcost, adj_node))
+
     if not path:
         print("No path!")
     
