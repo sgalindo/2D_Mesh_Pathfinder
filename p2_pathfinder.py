@@ -37,7 +37,7 @@ def find_path (source_point, destination_point, mesh):
     #prev stores the prev node for the node saved in the dict
     #detail_points is a dictionary of map points (x,y)
 
-    queue = [source_box]
+    queue = [(0, source_box)]
     prev = {}
     detail_points = {}
     dist = {source_box: 0}
@@ -99,16 +99,13 @@ def find_path (source_point, destination_point, mesh):
     """
 
     while queue:
-        current_node = heappop(queue)
-        current_dist = dist[current_node]
-        print(str(current_dist))
+        current_dist, current_node = heappop(queue)
 
         # CHANGE LATER
         if current_node == destination_box:
             #point1 and point2 are used to define the points of the box that they are in
             point1 = destination_point
             point2 = detail_points[current_node]
-            print('detail_points dict[current_node]', str(detail_points[current_node]))
             path.insert(0, (point1, point2))
             #Goes down the prev dict until you reach the source box
             while prev[current_node] != source_box:
@@ -127,11 +124,13 @@ def find_path (source_point, destination_point, mesh):
             print("Destination: " + str(destination_point))
 
         for adj_node in mesh['adj'][current_node]:
-            detail_points[adj_node] = calculate_point(current_node, adj_node, detail_points)
-            pathcost = current_dist + sqrt((detail_points[adj_node][0] - detail_points[current_node][0])**2 + (detail_points[adj_node][1] - detail_points[current_node][1])**2) 
+            new_point = calculate_point(current_node, adj_node, detail_points)
+            pathcost = current_dist + sqrt((new_point[0] - detail_points[current_node][0])**2 + (new_point[1] - detail_points[current_node][1])**2) 
             if adj_node not in dist or pathcost < dist[adj_node]:
                 dist[adj_node] = pathcost
                 prev[adj_node] = current_node
+                detail_points[adj_node] = new_point
+                pathcost += sqrt((new_point[0] - destination_point[0])**2 + (new_point[1] - destination_point[1])**2)
                 heappush(queue, (pathcost, adj_node))
 
     if not path:
