@@ -36,103 +36,112 @@ def find_path (source_point, destination_point, mesh):
     #queue starts with the source_box and will be used to process the boxes for the path
     #prev stores the prev node for the node saved in the dict
     #detail_points is a dictionary of map points (x,y)
-
-    queue = [(0, source_box)]
-    prev = {}
-    detail_points = {}
-    dist = {source_box: 0}
     
     print('Source box:', str(source_box))
     print('Destination box:', str(destination_box))
 
-    #Saving the source box and destination_point to the detail_points dict
-    detail_points[source_box] = source_point
-    detail_points[destination_box] = destination_point
-
-    #Special case where destination box is the same as the source box, return path
-
+    # Special case where destination box is the same as the source box, return path
     if destination_box == source_box:
         path.insert(0, (destination_point, source_point))
         return path, boxes.keys()
 
-    """
-    #Whenever you use path.insert, the format is (position, tuple)
-    #The tuple is made up of two coordinates to make (x,y)
+    # Priority queue
+    queue = [(0, source_box, 'forward'), (0, destination_box, 'back')]
+    # Previous nodes (forward and back)
+    prev_forward = {}
+    prev_back = {}
+    # Distances (forward and back)
+    dist_forward = {source_box: 0}
+    dist_back = {destination_box: 0}
+    # Detail points (forward and back)
+    detail_points_forward = {}
+    detail_points_back = {}
+
+    #Saving the source box and destination_point to their respective detail dicts
+    detail_points_forward[source_box] = source_point
+    detail_points_back[destination_box] = destination_point
+
     while queue:
-        #Pop off the node in the queue and save to current node
-        current_node = queue.pop()
-        #If the current node has reached the destination box, save the points to the path 
-        if current_node == destination_box:
-            #point1 and point2 are used to define the points of the box that they are in
-            #****Come back and maybe flip point1 and point2****
-            point1 = destination_point
-            point2 = detail_points[current_node]
-            print('detail_points dict[current_node]', str(detail_points[current_node]))
+        # Pop distance, node, and direction from queue
+        current_dist, current_node, current_direction = heappop(queue)
+
+        # If this node is in the opposite direction's prev[] list, we have reached the midpoint
+        if (current_direction == 'forward' and current_node in prev_back) or (current_direction == 'back' and current_node in prev_forward):
+            
+            # Case when the source and destination boxes are adjacent
+            if prev_forward[current_node] == source_box:
+                path.insert(0, (source_point, detail_points_forward[current_node]))
+                path.insert(0, (detail_points_forward[current_node], destination_point))
+                return path, boxes.keys()
+            
+            # Get both detail points for the middle box 
+            # (only this box has 2 since two line segments meet on either side)
+            # Insert line segment to path
+            point1 = detail_points_forward[current_node]
+            point2 = detail_points_back[current_node]
             path.insert(0, (point1, point2))
-            #Goes down the prev dict until you reach the source box
-            while prev[current_node] != source_box:
-                point1 = detail_points[current_node]
+
+            # Keep a copy of middle node for back direction
+            current_node2 = current_node
+
+            # Insert line segments from the forward direction until source is reached
+            while prev_forward[current_node] != source_box:
+                point1 = detail_points_forward[current_node]
                 boxes[current_node] = point1
-                current_node = prev[current_node]
-                point2 = detail_points[current_node]
-                print('detail_points dict[current_node]', str(detail_points[current_node]))
+                current_node = prev_forward[current_node]
+                point2 = detail_points_forward[current_node]
                 path.insert(0, (point1, point2))
-            #****Come back and maybe flip point1 and point2****
-            point1 = detail_points[current_node]
+            
+            # Insert source
+            point1 = detail_points_forward[current_node]
             point2 = source_point
             path.insert(0, (point1, point2))
             boxes[current_node] = point1
-            #print(path)
-            print("Source: " + str(source_point))
-            print("Destination: " + str(destination_point))
 
-        #If we have not reached the destination box, then we continue to search for the path
-        else:
-            for adj_node in mesh['adj'][current_node]:
-                #checks if the adj_node has already been discovered
-                if adj_node not in prev:
-                    prev[adj_node] = current_node
-                    #calculating the point for the detail_points dict
-                    detail_points[adj_node] = calculate_point(current_node, adj_node, detail_points)
-                    boxes[adj_node] = detail_points[adj_node]
-                    queue.append(adj_node)
-    """
-
-    while queue:
-        current_dist, current_node = heappop(queue)
-
-        # CHANGE LATER
-        if current_node == destination_box:
-            #point1 and point2 are used to define the points of the box that they are in
-            point1 = destination_point
-            point2 = detail_points[current_node]
-            path.insert(0, (point1, point2))
-            #Goes down the prev dict until you reach the source box
-            while prev[current_node] != source_box:
-                point1 = detail_points[current_node]
-                boxes[current_node] = point1
-                current_node = prev[current_node]
-                point2 = detail_points[current_node]
-                print('detail_points dict[current_node]', str(detail_points[current_node]))
+            # Insert line segments from the back direction until source is reached
+            while prev_back[current_node2] != destination_box:
+                point1 = detail_points_back[current_node2]
+                boxes[current_node2] = point1
+                current_node2 = prev_back[current_node2]
+                point2 = detail_points_back[current_node2]
                 path.insert(0, (point1, point2))
-            point1 = detail_points[current_node]
-            point2 = source_point
+            
+            # Insert destination
+            point1 = detail_points_back[current_node2]
+            point2 = destination_point
             path.insert(0, (point1, point2))
-            boxes[current_node] = point1
-            #print(path)
-            print("Source: " + str(source_point))
-            print("Destination: " + str(destination_point))
+            boxes[current_node2] = point1
 
-        for adj_node in mesh['adj'][current_node]:
-            new_point = calculate_point(current_node, adj_node, detail_points)
-            pathcost = current_dist + sqrt((new_point[0] - detail_points[current_node][0])**2 + (new_point[1] - detail_points[current_node][1])**2) 
-            if adj_node not in dist or pathcost < dist[adj_node]:
-                dist[adj_node] = pathcost
-                prev[adj_node] = current_node
-                detail_points[adj_node] = new_point
-                pathcost += sqrt((new_point[0] - destination_point[0])**2 + (new_point[1] - destination_point[1])**2)
-                heappush(queue, (pathcost, adj_node))
+            # Return path and explored boxes
+            return path, boxes.keys()
 
+        # For all nodes adjacent to current_node
+        for adj_node in mesh['adj'][current_node]: 
+            
+            if current_direction == 'forward':
+                # Calculate next point in adjacent box
+                new_point = calculate_point(current_node, adj_node, detail_points_forward)
+                # Add distance from current point to next to the total distance from start
+                pathcost = current_dist + sqrt((new_point[0] - detail_points_forward[current_node][0])**2 + (new_point[1] - detail_points_forward[current_node][1])**2)
+                # If adj_node has not been visited / has a better cost than the others
+                if adj_node not in dist_forward or pathcost < dist_forward[adj_node]:
+                    dist_forward[adj_node] = pathcost
+                    prev_forward[adj_node] = current_node
+                    detail_points_forward[adj_node] = new_point
+                    pathcost += sqrt((new_point[0] - destination_point[0])**2 + (new_point[1] - destination_point[1])**2)
+                    # Push pathcost, node, and its direction to heap
+                    heappush(queue, (pathcost, adj_node, 'forward'))
+            if current_direction == 'back':
+                new_point = calculate_point(current_node, adj_node, detail_points_back)
+                pathcost = current_dist + sqrt((new_point[0] - detail_points_back[current_node][0])**2 + (new_point[1] - detail_points_back[current_node][1])**2)
+                if adj_node not in dist_back or pathcost < dist_back[adj_node]:
+                    dist_back[adj_node] = pathcost
+                    prev_back[adj_node] = current_node
+                    detail_points_back[adj_node] = new_point
+                    pathcost += sqrt((new_point[0] - source_point[0])**2 + (new_point[1] - source_point[1])**2)
+                    heappush(queue, (pathcost, adj_node, 'back'))
+
+    # If no path exists, print this
     if not path:
         print("No path!")
     
@@ -156,7 +165,6 @@ def calculate_point(current_node, next_node, detail_points):
         #Checks if current node's small x is bigger than next node's big x and
         #next node's big x is smaller than current node's small x
         #Means that lower and upper x bounds follows next nodes small and big x 
-        #*******CHANGE HERE********** 
         if current_node[0] <= next_node[1] and next_node[1] <= current_node[1]:
             lower_x = next_node[0]
             upper_x = next_node[1]
@@ -186,7 +194,6 @@ def calculate_point(current_node, next_node, detail_points):
         #Checks if current node's small y is bigger than next node's big y and
         #next node's big y is smaller than current node's small y
         #Means that lower and upper y bounds follows next nodes small and big y
-        #*******CHANGE HERE********** 
         if current_node[2] <= next_node[3] and next_node[3] <= current_node[3]:
             lower_y = next_node[2]
             upper_y = next_node[3]
@@ -207,6 +214,7 @@ def calculate_point(current_node, next_node, detail_points):
         else:
             lower_y = current_node[2]
             upper_y = next_node[3]
+    
     point = (max(min(detail_points[current_node][0], upper_x), lower_x), max(min(detail_points[current_node][1], upper_y), lower_y))
 
     return point
